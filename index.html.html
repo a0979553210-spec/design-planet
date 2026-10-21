@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>設計星球 0.2｜設計工作台</title>
+<style>
+*{box-sizing:border-box}
+:root{--ink:#252a35;--muted:#737988;--line:#dddfe5;--paper:#fafaf8;--panel:#fff;--accent:#39445a}
+body{margin:0;background:#e9ebef;color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,"Noto Sans TC","PingFang TC",sans-serif}
+button,input{font:inherit}
+button{cursor:pointer}
+.app{min-height:100vh}
+.top{height:64px;background:#20283a;color:#fff;display:flex;align-items:center;justify-content:space-between;padding:0 18px;gap:12px}
+.brand{font-weight:800;letter-spacing:2px}
+.top small{color:#c5cbd6}
+.btn{border:1px solid var(--line);background:#fff;color:var(--ink);border-radius:10px;padding:9px 13px}
+.btn.dark{background:#39445a;color:#fff;border-color:#39445a}
+.workspace{display:grid;grid-template-columns:270px 1fr 280px;min-height:calc(100vh - 64px)}
+.sidebar,.inspector{background:#f7f7f5;padding:18px}
+.sidebar{border-right:1px solid var(--line)}
+.inspector{border-left:1px solid var(--line)}
+h2,h3,p{margin-top:0}
+h3{font-size:15px;margin-bottom:12px}
+.brief{background:#fff;border:1px solid var(--line);border-radius:14px;padding:15px;line-height:1.65;font-size:13px;margin-bottom:18px}
+.brief strong{display:block;font-size:15px;margin-bottom:6px}
+.toolgrid{display:grid;grid-template-columns:1fr 1fr;gap:9px}
+.tool{min-height:62px;background:#fff;border:1px solid var(--line);border-radius:12px;text-align:left;padding:10px}
+.tool b{display:block;font-size:18px;margin-bottom:3px}
+.tool span{font-size:12px;color:var(--muted)}
+.tip{margin-top:18px;padding:12px;background:#eef0f4;border-radius:12px;font-size:12px;color:#616878;line-height:1.6}
+.canvas-area{padding:28px;display:flex;align-items:center;justify-content:center;overflow:auto;background:#e9ebef}
+.canvas-wrap{width:min(100%,720px)}
+.canvas-title{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
+.canvas-title span{font-size:12px;color:var(--muted)}
+.canvas{position:relative;width:100%;aspect-ratio:4/5;background:#f5eadc;box-shadow:0 12px 30px rgba(20,25,35,.13);overflow:hidden;touch-action:none}
+.element{position:absolute;min-width:40px;min-height:30px;padding:5px;border:1px solid transparent;touch-action:none;user-select:none}
+.element.selected{border:1px dashed #39445a}
+.text-el{font-size:34px;font-weight:800}
+.shape-el{background:#39445a;width:120px;height:80px;padding:0}
+.drag-note{position:absolute;bottom:12px;right:12px;background:rgba(255,255,255,.78);padding:6px 9px;border-radius:8px;font-size:11px;color:#555}
+.field{margin-bottom:14px}
+.field label{display:block;font-size:12px;color:var(--muted);margin-bottom:6px}
+.field input[type=text],.field input[type=number]{width:100%;padding:9px;border:1px solid var(--line);border-radius:9px;background:#fff}
+.color-row{display:flex;gap:8px;flex-wrap:wrap}
+.swatch{width:30px;height:30px;border-radius:8px;border:2px solid #fff;box-shadow:0 0 0 1px var(--line)}
+.empty{font-size:13px;color:var(--muted);line-height:1.6}
+.actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:18px}
+.actions .btn{flex:1}
+.modal{position:fixed;inset:0;background:rgba(20,25,35,.58);display:none;align-items:center;justify-content:center;padding:18px;z-index:10}
+.modal.show{display:flex}
+.dialog{width:min(480px,100%);background:#fff;border-radius:18px;padding:24px}
+.dialog h2{margin-bottom:8px}
+.score{font-size:42px;font-weight:900;margin:15px 0}
+.toast{position:fixed;left:50%;bottom:22px;transform:translateX(-50%) translateY(20px);background:#20283a;color:#fff;padding:11px 15px;border-radius:10px;opacity:0;pointer-events:none;transition:.25s;z-index:20;font-size:13px}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+@media(max-width:900px){
+ .workspace{grid-template-columns:1fr}
+ .sidebar,.inspector{border:0;border-bottom:1px solid var(--line)}
+ .sidebar{padding:14px}
+ .brief{margin-bottom:12px}
+ .toolgrid{grid-template-columns:repeat(4,1fr)}
+ .tool{min-height:55px;padding:8px}
+ .tool b{font-size:16px}
+ .tool span{font-size:10px}
+ .inspector{padding:14px}
+ .canvas-area{padding:18px 12px}
+}
+@media(max-width:520px){
+ .top{height:58px;padding:0 12px}
+ .top small{display:none}
+ .workspace{min-height:calc(100vh - 58px)}
+ .toolgrid{grid-template-columns:repeat(4,1fr);gap:6px}
+ .tool{text-align:center;padding:7px 3px}
+ .tool b{font-size:16px}
+ .canvas-wrap{width:100%}
+ .canvas-title{font-size:13px}
+}
+</style>
+</head>
+<body>
+<div class="app">
+<header class="top">
+  <div><div class="brand">🌍 設計星球</div><small>0.2｜第一個設計工作台</small></div>
+  <button class="btn" onclick="goHome()">← 委託中心</button>
+</header>
+
+<div class="workspace">
+  <aside class="sidebar">
+    <h3>📋 客戶需求</h3>
+    <div class="brief">
+      <strong>☕ 拾光咖啡</strong>
+      新店開幕海報<br><br>
+      溫暖、安靜、有一點復古感，但不要太老氣；希望年輕人看到海報時，會想進來坐一下午。
+      <br><br><b>預算：$8,000</b>
+    </div>
+    <h3>🧰 設計工具</h3>
+    <div class="toolgrid">
+      <button class="tool" onclick="addText()"><b>T</b><span>新增文字</span></button>
+      <button class="tool" onclick="addShape()"><b>▰</b><span>新增色塊</span></button>
+      <button class="tool" onclick="changeBg()"><b>🎨</b><span>背景色</span></button>
+      <button class="tool" onclick="deleteSelected()"><b>⌫</b><span>刪除</span></button>
+    </div>
+    <div class="tip">💡 小提示：點選畫布上的元素，再用手指或滑鼠拖曳它。先試著排出一個有「主標題＋色塊」的海報。</div>
+  </aside>
+
+  <main class="canvas-area">
+    <div class="canvas-wrap">
+      <div class="canvas-title"><b>🎨 拾光咖啡｜新店開幕海報</b><span>4 : 5</span></div>
+      <div id="canvas" class="canvas">
+        <div id="welcome" class="element text-el selected" style="left:12%;top:16%;color:#39445a" data-type="text">HELLO, COFFEE.</div>
+        <div id="block0" class="element shape-el" style="left:12%;top:43%;background:#b97855"></div>
+        <div class="drag-note">拖曳元素試試看</div>
+      </div>
+    </div>
+  </main>
+
+  <aside class="inspector">
+    <h3>⚙️ 屬性</h3>
+    <div id="inspectorContent">
+      <div class="field"><label>文字內容</label><input id="textInput" type="text" value="HELLO, COFFEE." oninput="updateText(this.value)"></div>
+      <div class="field"><label>文字大小</label><input id="sizeInput" type="number" value="34" min="10" max="100" oninput="updateSize(this.value)"></div>
+      <div class="field"><label>顏色</label><div class="color-row">
+        <button class="swatch" style="background:#39445a" onclick="updateColor('#39445a')"></button>
+        <button class="swatch" style="background:#b97855" onclick="updateColor('#b97855')"></button>
+        <button class="swatch" style="background:#7a6958" onclick="updateColor('#7a6958')"></button>
+        <button class="swatch" style="background:#f7f0e5" onclick="updateColor('#f7f0e5')"></button>
+        <button class="swatch" style="background:#2e2e2e" onclick="updateColor('#2e2e2e')"></button>
+      </div></div>
+      <div class="actions">
+        <button class="btn" onclick="resetCanvas()">↶ 重置</button>
+        <button class="btn dark" onclick="submitWork()">提交作品</button>
+      </div>
+    </div>
+  </aside>
+</div>
+</div>
+
+<div id="modal" class="modal">
+  <div class="dialog">
+    <h2>🎉 作品已提交</h2>
+    <p>客戶正在查看你的第一份設計。</p>
+    <div class="score" id="score">82</div>
+    <p id="feedback">「整體氛圍很溫暖，標題也很醒目。再多注意一點版面層級，你會更接近專業設計。」</p>
+    <button class="btn dark" style="width:100%" onclick="closeModal()">完成</button>
+  </div>
+</div>
+<div id="toast" class="toast"></div>
+
+<script>
+const canvas=document.getElementById('canvas');
+let selected=null, drag=null, z=5;
+
+function select(el){
+  document.querySelectorAll('.element').forEach(x=>x.classList.remove('selected'));
+  selected=el; if(el){el.classList.add('selected');syncInspector();}
+}
+function syncInspector(){
+  if(!selected)return;
+  const isText=selected.dataset.type==='text';
+  document.getElementById('textInput').disabled=!isText;
+  document.getElementById('textInput').value=isText?selected.textContent:'';
+  document.getElementById('sizeInput').disabled=!isText;
+  document.getElementById('sizeInput').value=isText?parseInt(getComputedStyle(selected).fontSize):30;
+}
+function addText(){
+  const el=document.createElement('div');
+  el.className='element text-el'; el.dataset.type='text'; el.textContent='你的文字';
+  el.style.left='18%';el.style.top='65%';el.style.color='#39445a';el.style.fontSize='28px';el.style.zIndex=++z;
+  canvas.appendChild(el); bind(el); select(el); toast('已新增文字');
+}
+function addShape(){
+  const el=document.createElement('div');
+  el.className='element shape-el'; el.dataset.type='shape';
+  el.style.left='58%';el.style.top='64%';el.style.background='#7a6958';el.style.zIndex=++z;
+  canvas.appendChild(el);bind(el);select(el);toast('已新增色塊');
+}
+function bind(el){
+  el.addEventListener('pointerdown',e=>{
+    e.stopPropagation();select(el);el.setPointerCapture(e.pointerId);
+    const r=canvas.getBoundingClientRect(), er=el.getBoundingClientRect();
+    drag={x:e.clientX,y:e.clientY,left:er.left-r.left,top:er.top-r.top};
+  });
+  el.addEventListener('pointermove',e=>{
+    if(!drag)return;
+    const r=canvas.getBoundingClientRect();
+    let x=drag.left+(e.clientX-drag.x), y=drag.top+(e.clientY-drag.y);
+    x=Math.max(0,Math.min(r.width-el.offsetWidth,x));y=Math.max(0,Math.min(r.height-el.offsetHeight,y));
+    el.style.left=(x/r.width*100)+'%';el.style.top=(y/r.height*100)+'%';
+  });
+  el.addEventListener('pointerup',()=>drag=null);
+}
+function updateText(v){if(selected&&selected.dataset.type==='text')selected.textContent=v}
+function updateSize(v){if(selected&&selected.dataset.type==='text')selected.style.fontSize=v+'px'}
+function updateColor(c){if(selected){selected.style.background=selected.dataset.type==='shape'?c:selected.style.color=c}}
+function changeBg(){
+  const colors=['#f5eadc','#ece7dc','#e6ddd2','#e5e7e4','#dfe3e8','#f2e4e2'];
+  const c=colors[Math.floor(Math.random()*colors.length)];canvas.style.background=c;toast('背景已更新');
+}
+function deleteSelected(){
+  if(!selected)return toast('請先選取一個元素');
+  selected.remove();selected=null;toast('元素已刪除');
+}
+function resetCanvas(){
+  location.reload();
+}
+function submitWork(){
+  const score=Math.floor(76+Math.random()*18);
+  document.getElementById('score').textContent=score;
+  document.getElementById('feedback').textContent=score>86?'「很不錯！畫面有明確的視覺焦點，而且整體氛圍符合需求。繼續保持。」':'「整體方向很溫暖，已經有自己的想法。下一次可以再注意版面層級與留白。」';
+  document.getElementById('modal').classList.add('show');
+}
+function closeModal(){document.getElementById('modal').classList.remove('show');}
+function goHome(){alert('下一步可以把這裡接回委託中心。現在先專心完成你的第一張海報！')}
+function toast(t){const x=document.getElementById('toast');x.textContent=t;x.classList.add('show');clearTimeout(window.tt);window.tt=setTimeout(()=>x.classList.remove('show'),1500)}
+document.querySelectorAll('.element').forEach(bind);
+canvas.addEventListener('pointerdown',()=>select(null));
+</script>
+</body>
+</html>
